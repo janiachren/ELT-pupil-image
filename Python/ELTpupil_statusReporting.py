@@ -1,11 +1,19 @@
 import re
 import numpy as np
-import matplotlib.pyplot as plt
-#from anisocado_pupil_Utils import generateEeltPupilReflectivity
+#import matplotlib.pyplot as plt
 import anisocado_pupUtils
 from astropy.io import fits
 import xml.etree.ElementTree as ET
+
 from datetime import datetime, timezone
+from astropy.time import Time
+
+import warnings
+# Suppress ERFA "dubious year" warnings
+warnings.filterwarnings('ignore', message='.*dubious year.*')
+# Suppress FITS VerifyWarnings for long ESO keywords
+warnings.filterwarnings('ignore', category=fits.verify.VerifyWarning)
+
 
 # ======= PARAMETERS =======
 grid_size = 822
@@ -80,24 +88,52 @@ pupil_mask = anisocado_pupUtils.generateEeltPupilReflectivity(
     EeltDiam, softGap=False
 )
 
-# Show pupil mask
-plt.imshow(pupil_mask, cmap="gray", origin="lower")
-plt.title("ELT M1 Pupil Mask - Current Status")
-plt.colorbar()
-plt.show()
+# Show pupil mask during console execution, optional
+#plt.imshow(pupil_mask, cmap="gray", origin="lower")
+#plt.title("ELT M1 Pupil Mask - Current Status")
+#plt.colorbar()
+#plt.show()
 
-# Get ESO-style UTC timestamp
-timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+# Single UTC datetime
+dt = datetime.now(timezone.utc)
+t = Time(dt, format='datetime', scale='utc')
 
-# Filename with timestamp
-fits_filename = f"ELTpupil_status_current_{timestamp}.fits"
+# Filename string
+timestamp = dt.strftime("%Y-%m-%dT%H:%M:%S")
+fits_filename = f"c.ELT.{timestamp}.pupil.segmentstatus.fits"
 
-# Create FITS HDU and add timestamp to header
+# FITS header numeric MJD
+mjd_obs = Time(dt, format='datetime', scale='utc').mjd
+
+# Create FITS HDU
 hdu = fits.PrimaryHDU(pupil_mask)
-hdu.header['DATE-OBS'] = timestamp   # ESO standard keyword
-hdu.header['ORIGIN'] = 'ELT pupil status reporting script'
-hdu.header['COMMENT'] = 'Mirror segment reflectivity and operational status snapshot'
+hdr = hdu.header
 
-# Write to FITS file
+# Standard FITS keywords
+hdr['BITPIX']  = -64
+hdr['NAXIS']   = 2
+hdr['NAXIS1']  = grid_size
+hdr['NAXIS2']  = grid_size
+hdr['EXTEND']  = True
+
+# ESO-specific keywords
+hdr['INSTRUME']     = 'ELT'
+hdr['MJD-OBS']      = t.mjd
+hdr['DATE-OBS']     = t.isot
+hdr['ESO DPR CATG'] = 'CALIB'
+hdr['ESO DPR TYPE'] = 'PUPIL'
+hdr['ESO DPR TECH'] = 'IMAGE'
+hdr['ESO DET CHIP'] = 'PUPIL'
+hdr['ESO INS OPTI'] = 'PRIMARY'
+hdr['ESO INS MODE'] = 'SIMULATION'
+
+# Metadata
+hdr['ORIGIN']  = 'ESO'
+hdr['OBJECT']  = 'ELT PUPIL REFLECTIVITY'
+hdr['COMMENT'] = 'Mirror segment reflectivity and operational status snapshot'
+
+# Save file
+fits_filename = f"c.ELT.{t.isot}.pupil.segmentstatus.fits"
 hdu.writeto(fits_filename, overwrite=True)
-print(f"Saved FITS file: {fits_filename}")
+
+#print(f"Saved FITS file: {fits_filename}")
