@@ -81,7 +81,7 @@ xml_file = "StatusM1segments.xml"
 F1 = load_segments_from_file(xml_file, num_segments)
 
 # Generate pupil mask from today’s reflectivities
-pupil_mask = anisocado_pupUtils.generateEeltPupilReflectivity(
+pupil_mask = anisocado_pupUtils.generateEeltPupilReflectivity( #JA add. (varDspider))
     F1, grid_size, spider_width,
     410.5, 410.5,
     pixscale, gap, 0.0,
@@ -99,7 +99,7 @@ dt = datetime.now(timezone.utc)
 t = Time(dt, format='datetime', scale='utc')
 
 # Filename string
-timestamp = dt.strftime("%Y-%m-%dT%H:%M:%S")
+timestamp = dt.strftime("%Y-%m-%dT%H_%M_%S")
 fits_filename = f"c.ELT.{timestamp}.pupil.segmentstatus.fits"
 
 # FITS header numeric MJD
@@ -133,7 +133,6 @@ hdr['OBJECT']  = 'ELT PUPIL REFLECTIVITY'
 hdr['COMMENT'] = 'Mirror segment reflectivity and operational status snapshot'
 
 # Save file
-fits_filename = f"c.ELT.{t.isot}.pupil.segmentstatus.fits"
 hdu.writeto(fits_filename, overwrite=True)
 
 #print(f"Saved FITS file: {fits_filename}")
