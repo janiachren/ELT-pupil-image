@@ -99,7 +99,7 @@ dt = datetime.now(timezone.utc)
 t = Time(dt, format='datetime', scale='utc')
 
 # Filename string
-timestamp = dt.strftime("%Y-%m-%dT%H:%M:%S")
+timestamp = dt.strftime("%Y-%m-%dT%H_%M_%S")
 fits_filename = f"c.ELT.{timestamp}.pupil.segmentstatus.fits"
 
 # FITS header numeric MJD
@@ -133,7 +133,6 @@ hdr['OBJECT']  = 'ELT PUPIL REFLECTIVITY'
 hdr['COMMENT'] = 'Mirror segment reflectivity and operational status snapshot'
 
 # Save file
-fits_filename = f"c.ELT.{t.isot}.pupil.segmentstatus.fits"
 hdu.writeto(fits_filename, overwrite=True)
 
 #print(f"Saved FITS file: {fits_filename}")
