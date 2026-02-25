@@ -6,3 +6,7 @@ It then reviews the operational status and the coating performance M1 segments r
 and adjusts the reflectivity levels of each segment. The result is output as a FITS file.
 
 For the testing purposes, the data contained in StatusM1segments.xml is arbitrary.
+
+C folder contains the conversions to C, with version upgrades as the conversion progresses in increments.
+- v1.0: Basic functionality
+- v1.1: CPL/DFS recipes
