@@ -18,7 +18,7 @@
 
 #include "eelt_pupil.h"
 
-/* ======= PARAMETERS (matching your standalone) ======= */
+/* ======= PARAMETERS ======= */
 static const int GRID_SIZE = 822;
 static const int NUM_SEGMENTS = 798;
 static const double EELT_DIAM = 40.0;
@@ -30,7 +30,7 @@ static const double MAX_REFLECTIVITY = 0.96;
 static const double MIN_REFLECTIVITY = 0.91;
 static const double COATING_DEGRADATION_PER_DAY = 0.000125;
 
-/* ---------- small helpers copied from elt_pupil_status.c ---------- */
+/* ---------- small helpers ---------- */
 
 static char* trim(char* s) {
     if (!s) return s;
@@ -79,7 +79,7 @@ static xmlNode* find_segments_node(xmlNode* root) {
     return NULL;
 }
 
-/* XML loader: same logic as in elt_pupil_status.c */
+/* XML loader */
 static int load_segments_from_file(const char* filename, double* F1, int n_segments) {
     if (!filename || !F1) return 0;
 
@@ -98,16 +98,13 @@ static int load_segments_from_file(const char* filename, double* F1, int n_segme
         return 0;
     }
     size_t nread = fread(buf, 1, sz, f);
-    if (nread != sz) {
-        cpl_msg_warning(__func__, "fread read only %zu of %ld bytes", nread, sz);
-    }
     buf[sz] = '\0';
     fclose(f);
 
     const char* start = strstr(buf, "<segments");
     if (!start) {
         free(buf);
-        cpl_msg_error(__func__, "No <segments> block found in file.");
+        cpl_msg_error(__func__, "No <segments> block found.");
         return 0;
     }
     const char* end = strstr(start, "</segments>");
@@ -120,11 +117,6 @@ static int load_segments_from_file(const char* filename, double* F1, int n_segme
 
     size_t block_len = (size_t)(end - start);
     char* xml_block = (char*)malloc(block_len + 1);
-    if (!xml_block) {
-        free(buf);
-        cpl_msg_error(__func__, "Out of memory extracting XML block.");
-        return 0;
-    }
     memcpy(xml_block, start, block_len);
     xml_block[block_len] = '\0';
 
@@ -140,8 +132,7 @@ static int load_segments_from_file(const char* filename, double* F1, int n_segme
 
     xmlNode* root = xmlDocGetRootElement(doc);
     xmlNode* segments = NULL;
-    if (root && root->type == XML_ELEMENT_NODE &&
-        xmlStrcmp(root->name, (const xmlChar*)"segments") == 0)
+    if (root && xmlStrcmp(root->name, (const xmlChar*)"segments") == 0)
         segments = root;
     else
         segments = find_segments_node(root);
@@ -166,14 +157,11 @@ static int load_segments_from_file(const char* filename, double* F1, int n_segme
             if (id_attr) xmlFree(id_attr);
             if (operational_attr) xmlFree(operational_attr);
             if (last_attr) xmlFree(last_attr);
-            cpl_msg_warning(__func__, "segment missing attributes; skipping.");
             continue;
         }
 
-        char* id_str = trim((char*)id_attr);
-        int seg_id = atoi(id_str) - 1;
+        int seg_id = atoi(trim((char*)id_attr)) - 1;
         if (seg_id < 0 || seg_id >= n_segments) {
-            cpl_msg_warning(__func__, "segment id out of range: %d", seg_id + 1);
             xmlFree(id_attr); xmlFree(operational_attr); xmlFree(last_attr);
             continue;
         }
@@ -212,30 +200,13 @@ static int load_segments_from_file(const char* filename, double* F1, int n_segme
     return 1;
 }
 
-/* ---------- CPL recipe metadata ---------- */
+/* ---------- Recipe metadata ---------- */
 
 static const char recipe_name[]        = "micado_elt_pupil_status";
 static const char recipe_description[] = "Generate ELT M1 pupil status map";
 static const char recipe_author[]      = "Jani";
 static const char recipe_email[]       = "unknown";
-static const char recipe_version[]     = "1.0";
-
-/* ---------- Parameter list ---------- */
-
-static cpl_parameterlist * micado_elt_pupil_status_create_pars(void)
-{
-    cpl_parameterlist *pars = cpl_parameterlist_new();
-
-    cpl_parameter *p = cpl_parameter_new_value(
-        "xml_file",
-        CPL_TYPE_STRING,
-        "Path to StatusM1segments.xml",
-        "StatusM1segments.xml"
-    );
-    cpl_parameterlist_append(pars, p);
-
-    return pars;
-}
+static const unsigned long recipe_version = 100UL;
 
 /* ---------- Recipe execution ---------- */
 
@@ -244,13 +215,18 @@ static cpl_error_code micado_elt_pupil_status_exec(cpl_frameset *frameset,
 {
     (void)frameset;
 
-    const cpl_parameter *p_xml =
-        cpl_parameterlist_find_const(pars, "xml_file");
-    const char *xml_file = cpl_parameter_get_string(p_xml);
+    const char *xml_file = "StatusM1segments.xml";
+
+    if (pars) {
+        const cpl_parameter *p_xml =
+            cpl_parameterlist_find_const(pars, "xml_file");
+        if (p_xml)
+            xml_file = cpl_parameter_get_string(p_xml);
+    }
 
     double *F1 = cpl_malloc(NUM_SEGMENTS * sizeof(double));
     if (!F1)
-        return cpl_error_set_message(cpl_func, CPL_ERROR_MEMORY_ALLOCATION,
+        return cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
                                      "Cannot allocate F1");
 
     if (!load_segments_from_file(xml_file, F1, NUM_SEGMENTS)) {
@@ -272,20 +248,20 @@ static cpl_error_code micado_elt_pupil_status_exec(cpl_frameset *frameset,
     cpl_free(F1);
 
     if (!pupil)
-        return cpl_error_set_message(cpl_func, CPL_ERROR_RUNTIME,
+        return cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
                                      "generateEeltPupilReflectivity failed");
 
     cpl_image *img = cpl_image_new(GRID_SIZE, GRID_SIZE, CPL_TYPE_DOUBLE);
     if (!img) {
         cpl_free(pupil);
-        return cpl_error_set_message(cpl_func, CPL_ERROR_MEMORY_ALLOCATION,
+        return cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
                                      "Cannot allocate CPL image");
     }
 
     for (int y = 0; y < GRID_SIZE; ++y)
         for (int x = 0; x < GRID_SIZE; ++x)
-            cpl_image_set_double(img, x + 1, y + 1,
-                                 pupil[(size_t)y * GRID_SIZE + (size_t)x]);
+            cpl_image_set(img, x + 1, y + 1,
+                          pupil[(size_t)y * GRID_SIZE + (size_t)x]);
     cpl_free(pupil);
 
     cpl_propertylist *hdr = cpl_propertylist_new();
@@ -293,15 +269,6 @@ static cpl_error_code micado_elt_pupil_status_exec(cpl_frameset *frameset,
     cpl_propertylist_update_string(hdr, "ESO DPR CATG", "CALIB");
     cpl_propertylist_update_string(hdr, "ESO DPR TYPE", "PUPIL");
     cpl_propertylist_update_string(hdr, "ESO DPR TECH", "IMAGE");
-    cpl_propertylist_update_string(hdr, "ORIGIN",
-                                   "ESO ELT PUPIL STATUS GENERATOR");
-
-    cpl_propertylist_update_string(hdr, CPL_DFS_PRO_CATG,
-                                   "ELT-PUPIL-STATUS");
-    cpl_propertylist_update_string(hdr, CPL_DFS_PRO_TYPE,
-                                   "IMAGE");
-    cpl_propertylist_update_string(hdr, CPL_DFS_PRO_TECH,
-                                   "IMAGE");
 
     cpl_error_code err = cpl_dfs_save_image(
         NULL,
@@ -326,17 +293,21 @@ static cpl_error_code micado_elt_pupil_status_exec(cpl_frameset *frameset,
 
 /* ---------- Plugin boilerplate ---------- */
 
-cpl_plugin * cpl_plugin_get_info(void)
+int cpl_plugin_get_info(cpl_pluginlist *list)
 {
     cpl_plugin *plugin = cpl_plugin_new();
+    if (!plugin)
+        return CPL_ERROR_ILLEGAL_INPUT;
+
     cpl_plugin_set_name(plugin, recipe_name);
     cpl_plugin_set_description(plugin, recipe_description);
     cpl_plugin_set_author(plugin, recipe_author);
     cpl_plugin_set_email(plugin, recipe_email);
     cpl_plugin_set_version(plugin, recipe_version);
     cpl_plugin_set_type(plugin, CPL_PLUGIN_TYPE_RECIPE);
-    cpl_plugin_set_create_pars(plugin, micado_elt_pupil_status_create_pars);
-    cpl_plugin_set_exec(plugin, micado_elt_pupil_status_exec);
-    return plugin;
-}
 
+    /* Only exec callback, no create_pars */
+    cpl_plugin_set_exec(plugin, (cpl_plugin_func)micado_elt_pupil_status_exec);
+
+    return cpl_pluginlist_append(list, plugin);
+}
