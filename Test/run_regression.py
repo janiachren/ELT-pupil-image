@@ -91,7 +91,7 @@ def compare_fits(py_file, c_file):
         return False, f"Shape mismatch: py={py.shape}, c={c.shape}"
 
     if np.allclose(py, c, rtol=RTOL, atol=ATOL):
-        return True, f"Match within ESO tolerances (rtol={RTOL}, atol={ATOL})"
+        return True, f"Match within tolerances (rtol={RTOL}, atol={ATOL})"
 
     diff = np.abs(py - c)
     return False, f"Mismatch: max diff={diff.max()}, mean diff={diff.mean()}"
