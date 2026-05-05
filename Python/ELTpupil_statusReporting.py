@@ -1,6 +1,7 @@
 import re
 import numpy as np
 #import matplotlib.pyplot as plt
+import sys
 import anisocado_pupUtils
 from astropy.io import fits
 import xml.etree.ElementTree as ET
@@ -28,7 +29,7 @@ gap = 0.0 # 0.002 from M. Cayrel et al, "E-ELT Optomechanics: Overview"
 # Source: Schneider, "Silver Coating on large Telescope Mirrors Tutorial", OPTI521.
 # Values approximated from Gemini South M1 coating data (in-situ washing effects ignored)
 max_reflectivity = 0.96
-min_reflectivity = 0.91
+#min_reflectivity = 0.0
 coating_degradation_per_day = 0.000125
 
 
@@ -62,7 +63,7 @@ def load_segments_from_file(filename, num_segments):
         if operational:
             days_since = (today - last_recoating).days
             reflectivity = max_reflectivity - coating_degradation_per_day * days_since
-            reflectivity = max(reflectivity, min_reflectivity)
+#            reflectivity = max(reflectivity, min_reflectivity)
         else:
             reflectivity = 0.0
 
@@ -73,10 +74,16 @@ def load_segments_from_file(filename, num_segments):
 
 
 # ======= MAIN EXECUTION =======
-xml_file = "StatusM1segments.xml"
+
 # Can also be replaced by any TXT format file that contains the XML tag
 # <segments> and contents from the original StatusM1segments.xml.
 # Everything outside the first instance of <segments> are ignored.
+
+if len(sys.argv) < 2:
+    print("Usage: python3 ELTpupil_statusReporting.py <xml_file>")
+    sys.exit(1)
+
+xml_file = sys.argv[1]
 
 F1 = load_segments_from_file(xml_file, num_segments)
 
@@ -100,10 +107,13 @@ t = Time(dt, format='datetime', scale='utc')
 
 # Filename string
 timestamp = dt.strftime("%Y-%m-%dT%H_%M_%S")
-fits_filename = f"c.ELT.{timestamp}.pupil.segmentstatus.fits"
+#fits_filename = f"c.ELT.{timestamp}.pupil.segmentstatus.fits"
+fits_filename = f"p.ELT.{timestamp}.pupil.segmentstatus.fits"
 
 # FITS header numeric MJD
 mjd_obs = Time(dt, format='datetime', scale='utc').mjd
+
+pupil_mask = np.fliplr(np.rot90(pupil_mask, k=-1))
 
 # Create FITS HDU
 hdu = fits.PrimaryHDU(pupil_mask)
@@ -134,5 +144,3 @@ hdr['COMMENT'] = 'Mirror segment reflectivity and operational status snapshot'
 
 # Save file
 hdu.writeto(fits_filename, overwrite=True)
-
-#print(f"Saved FITS file: {fits_filename}")
