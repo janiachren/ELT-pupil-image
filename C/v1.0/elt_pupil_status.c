@@ -28,7 +28,7 @@ static const double GAP = 0.0;                 /* hard gap; softGap is false */
 
 /* Reflectivity model */
 static const double MAX_REFLECTIVITY = 0.96;
-static const double MIN_REFLECTIVITY = 0.91;
+/* static const double MIN_REFLECTIVITY = 0.0; */
 static const double COATING_DEGRADATION_PER_DAY = 0.000125;
 
 /* ======= Utilities ======= */
@@ -222,13 +222,13 @@ static int load_segments_from_file(const char* filename, double* F1, int n_segme
             if (parse_date(last_str, &recoating_tm)) {
                 int days = days_since(&recoating_tm);
                 reflectivity = MAX_REFLECTIVITY - COATING_DEGRADATION_PER_DAY * (double)days;
-                if (reflectivity < MIN_REFLECTIVITY) reflectivity = MIN_REFLECTIVITY;
-            } else {
-                /* If parse fails, conservatively use min reflectivity */
+                if (reflectivity < 0.0) reflectivity = 0.0;
+            }/* else {
+                /* If parse fails, conservatively use min reflectivity
                 reflectivity = MIN_REFLECTIVITY;
             }
         } else {
-            reflectivity = 0.0;
+            reflectivity = 0.0;*/
         }
 
         F1[seg_id] = reflectivity;
@@ -281,7 +281,10 @@ static int write_fits(const char* filename, const double* data, int width, int h
     int status = 0;
 
     long naxes[2] = { (long)width, (long)height };
-    if (fits_create_file(&fptr, filename, &status)) {
+	char overwrite_name[PATH_MAX];
+	snprintf(overwrite_name, sizeof(overwrite_name), "!%s", filename);
+
+	if (fits_create_file(&fptr, overwrite_name, &status)) {
         fits_report_error(stderr, status);
         return 0;
     }
