@@ -12,7 +12,7 @@ Usage:
      - create N xml files with randomized dates for last coating (default N=1000)
      - specifies relative and absolute tolerances for errors stemming from float32/64 differences, CFITSIO read/writes, compiler  reorder operations, trig function differences between glibc, libm, python maths, etc. (defaults RTOL = 1e-5, ATOL = 2e-4)
 3. Start test with
-   python3 run_regression.py
+   <code>python3 run_regression.py</code>
 4. Script creates N xml files to a temporary directory, creates FITS files with N_0 and comapares, deletes FITS files, continues with same with N_1, and repeats to N.
 5. Results are saved as "regression_log.txt"
    
