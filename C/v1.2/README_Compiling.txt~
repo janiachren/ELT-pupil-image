@@ -1,0 +1,16 @@
+## Compiling
+#with pkg-config (28.4.2026)
+gcc -fPIC -shared micado_elt_pupil_status.c -o micado_elt_pupil_status.so $(pkg-config --cflags --libs "cpl libxml-2.0") -lm
+
+
+#without pkg-config
+#gcc -shared -fPIC micado_elt_pupil_status.c -o micado_elt_pupil_status.so \
+#    -I/usr/include \
+#    -L/usr/lib/x86_64-linux-gnu \
+#    -lcplcore -lcpldfs -lcpldrs -lcplui -lcpltools -lcplmsg -lcplmath -lcplio -lcplfits
+
+
+
+## Running via esorex
+esorex micado_elt_pupil_status --xml_file=StatusM1segments.xml
+
