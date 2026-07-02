@@ -50,7 +50,7 @@ static void createHexaPattern(double pitch, double supportSize, double** outx, d
         }
     }
 
-    /* Build peak-axis and flat-axis arrays, then append shifted versions (as Python does) */
+    /* Build peak-axis and flat-axis arrays, then append shifted versions */
     double* peak_axis  = (double*)malloc((size_t)total * 2 * sizeof(double));
     double* flat_axis  = (double*)malloc((size_t)total * 2 * sizeof(double));
     if (!peak_axis || !flat_axis) { free(x); free(y); free(peak_axis); free(flat_axis); *outx = NULL; *outy = NULL; *outN = 0; return; }
@@ -114,7 +114,7 @@ static void reorganizeSegmentsOrderESO(const double* xin, const double* yin, int
             }
         }
 
-        /* sort sel by dist ascending (simple insertion sort for brevity) */
+        /* sort sel by dist ascending */
         for (int a = 1; a < count; ++a) {
             double keyd = dist[a];
             int keyi = sel[a];

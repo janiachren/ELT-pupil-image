@@ -28,7 +28,7 @@ static const double GAP = 0.0;                 /* hard gap; softGap is false */
 
 /* Reflectivity model */
 static const double MAX_REFLECTIVITY = 0.96;
-static const double MIN_REFLECTIVITY = 0.91;
+static const double MIN_REFLECTIVITY = 0.0;
 static const double COATING_DEGRADATION_PER_DAY = 0.000125;
 
 /* ======= Utilities ======= */
@@ -58,7 +58,7 @@ static int parse_date(const char* iso, struct tm* out) {
     return 1;
 }
 
-/* Days since given date (local time baseline, close enough for daily degradation) */
+/* Days since given date */
 static int days_since(const struct tm* then) {
     time_t now_t = time(NULL);
     struct tm now_tm;
